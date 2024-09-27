@@ -21,7 +21,7 @@ import textwrap
 from ast import literal_eval
 from typing import Any, List, Optional, Tuple
 
-from langchain.llms import BaseLLM
+from langchain_core.language_models.llms import BaseLLM
 from rich.text import Text
 
 from nemoguardrails.actions.actions import action
@@ -48,11 +48,18 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     get_element_from_head,
     get_event_from_element,
 )
+from nemoguardrails.context import (
+    generation_options_var,
+    llm_call_info_var,
+    streaming_handler_var,
+)
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging import verbose
+from nemoguardrails.logging.explain import LLMCallInfo
+from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.utils import console, new_uuid
 
 log = logging.getLogger(__name__)
@@ -389,6 +396,36 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             "bot_intent": bot_intent,
             "bot_action": bot_action,
         }
+
+    @action(name="GenerateBotMessageAction", is_system_action=True, execute_async=True)
+    async def generate_bot_message_action(
+        self,
+        user_message: str,
+        state: State,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+    ):
+        event = get_last_user_utterance_event_v2_x(events)
+
+        if not state.rails_config.passthrough:
+            raise Exception("Passthrough is not enabled.")
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
+
+        generation_options: GenerationOptions = generation_options_var.get()
+
+        with llm_params(
+            llm,
+            **((generation_options and generation_options.llm_params) or {}),
+        ):
+            text = await llm_call(
+                llm,
+                user_message,
+                custom_callback_handlers=[streaming_handler_var.get()],
+            )
+
+        return text
 
     @action(name="CheckValidFlowExistsAction", is_system_action=True)
     async def check_if_flow_exists(self, state: "State", flow_id: str) -> bool:
