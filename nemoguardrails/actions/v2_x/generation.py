@@ -397,8 +397,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             "bot_action": bot_action,
         }
 
-    @action(name="GenerateBotMessageAction", is_system_action=True, execute_async=True)
-    async def generate_bot_message_action(
+    @action(name="PassthroughLLMAction", is_system_action=True, execute_async=True)
+    async def passthrough_llm_action(
         self,
         user_message: str,
         state: State,

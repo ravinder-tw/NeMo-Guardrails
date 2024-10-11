@@ -13,8 +13,8 @@ flow bot say something like $text
   await bot say $variation
 
 
-flow bot responses to user prompt
-  """ in passthrough mode we just make a call to llm"""
+flow bot response to user prompt
+  """Just make a call to LLM in passthrough mode"""
 
   activate polling llm request response
   await _user_said_something_unexpected as $user_said
@@ -24,10 +24,9 @@ flow bot responses to user prompt
 
   $user_message = $event.final_transcript
 
-  if $system.config.passthrough
-    log "passthrough mode is activated"
-    $bot_message = await GenerateBotMessageAction(user_message=$user_message)
-    bot say $bot_message
+  log 'start generating bot response in passthrough mode...'
+  $bot_message = await PassthroughLLMAction(user_message=$user_message)
+  bot say $bot_message
 
 # -----------------------------------
 # LLM Utilities
@@ -58,7 +57,7 @@ flow llm continuation
   if $system.config.passthrough
     activate automating intent detection
     activate generating user intent for unhandled user utterance
-    activate bot responses to user prompt
+    activate bot response to user prompt
   else
     activate automating intent detection
     activate generating user intent for unhandled user utterance
