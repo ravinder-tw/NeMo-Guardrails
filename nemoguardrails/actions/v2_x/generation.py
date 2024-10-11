@@ -413,19 +413,19 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         raw_prompt = raw_llm_request.get()
 
         if raw_prompt is None:
-            prompt = event["text"]
+            prompt = event["final_transcript"]
         else:
             if isinstance(raw_prompt, str):
                 # If we're in completion mode, we use directly the last $user_message
                 # as it may have been altered by the input rails.
-                prompt = event["text"]
+                prompt = event["final_transcript"]
             elif isinstance(raw_prompt, list):
                 prompt = raw_prompt.copy()
 
                 # In this case, if the last message is from the user, we replace the text
                 # just in case the input rails may have altered it.
                 if prompt[-1]["role"] == "user":
-                    raw_prompt[-1]["content"] = event["text"]
+                    raw_prompt[-1]["content"] = event["final_transcript"]
             else:
                 raise ValueError(f"Unsupported type for raw prompt: {type(raw_prompt)}")
 
