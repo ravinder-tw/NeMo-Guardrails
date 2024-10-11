@@ -51,6 +51,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
 from nemoguardrails.context import (
     generation_options_var,
     llm_call_info_var,
+    raw_llm_request,
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
@@ -406,6 +407,27 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         llm: Optional[BaseLLM] = None,
     ):
         event = get_last_user_utterance_event_v2_x(events)
+
+        # We check if we have a raw request. If the guardrails API is using
+        # the `generate_events` API, this will not be set.
+        raw_prompt = raw_llm_request.get()
+
+        if raw_prompt is None:
+            prompt = event["text"]
+        else:
+            if isinstance(raw_prompt, str):
+                # If we're in completion mode, we use directly the last $user_message
+                # as it may have been altered by the input rails.
+                prompt = event["text"]
+            elif isinstance(raw_prompt, list):
+                prompt = raw_prompt.copy()
+
+                # In this case, if the last message is from the user, we replace the text
+                # just in case the input rails may have altered it.
+                if prompt[-1]["role"] == "user":
+                    raw_prompt[-1]["content"] = event["text"]
+            else:
+                raise ValueError(f"Unsupported type for raw prompt: {type(raw_prompt)}")
 
         if not state.rails_config.passthrough:
             raise Exception("Passthrough is not enabled.")
